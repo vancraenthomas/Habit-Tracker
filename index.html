@@ -52,10 +52,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .fade-in{animation:fadeIn .3s ease both;}
 .slide-up{animation:slideUp .35s ease both;}
 
-/* Confetti */
-@keyframes confettifall{0%{transform:translateY(0) rotate(0deg);opacity:1;}100%{transform:translateY(120px) rotate(360deg);opacity:0;}}
-#confetti-box{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;}
-.confetti-dot{position:absolute;width:6px;height:6px;border-radius:50%;animation:confettifall 1.2s ease-out forwards;}
 
 .header{padding:max(env(safe-area-inset-top),20px) 16px 16px;background:linear-gradient(180deg,rgba(91,188,255,0.06) 0%,transparent 100%);border-bottom:1px solid rgba(91,188,255,0.08);}
 .logo{font-size:28px;font-weight:800;letter-spacing:-1px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
@@ -72,7 +68,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .habit-card.open{border-color:rgba(91,188,255,0.25);}
 .habit-header{width:100%;padding:14px 16px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;gap:12px;text-align:left;}
 .habit-header:active{opacity:0.8;}
-.habit-body{padding:0 16px 16px;animation:fadeIn .25s ease;}
+.habit-body{padding:0 16px 16px;}
 .modal-bg{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:flex;align-items:flex-end;justify-content:center;padding:0;animation:fadeIn .2s ease;}
 @media(min-width:500px){.modal-bg{align-items:center;padding:16px;}}
 .modal{width:100%;max-width:500px;max-height:90vh;overflow-y:auto;background:linear-gradient(145deg,#111827,#0F172A);border:1px solid var(--card-border);border-radius:20px 20px 0 0;padding:24px;animation:slideUp .3s ease;}
@@ -87,7 +83,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 </head>
 <body>
 <div id="app"></div>
-<div id="confetti-box"></div>
 <script>
 // ─── Constants ───
 const CATS = {
@@ -223,7 +218,8 @@ let activeUser=getActiveUserId();
 
 function userKey(){return "habits-"+activeUser;}
 function themeKey(){return "habits-theme-"+activeUser;}
-function save(){try{localStorage.setItem(userKey(),JSON.stringify(state));}catch{} syncToSheet();}
+let _syncTimer=null;
+function save(){try{localStorage.setItem(userKey(),JSON.stringify(state));}catch{} clearTimeout(_syncTimer);_syncTimer=setTimeout(syncToSheet,1500);}
 function saveLocal(){try{localStorage.setItem(userKey(),JSON.stringify(state));}catch{}}
 function loadUserState(){
   state={entries:{},fvList:[...DEF_FV],goals:[],custom:{}};
@@ -288,9 +284,8 @@ function isEntryEmpty(cat,data){
 }
 function setE(cat,data){
   const key=`${fmt(selDate)}_${cat}`;
-  const hadData=!!state.entries[key];
   if(isEntryEmpty(cat,data))delete state.entries[key];
-  else{state.entries[key]=data;if(!hadData)spawnConfetti();}
+  else state.entries[key]=data;
   save();render();
 }
 function allCats(){const c={...CATS};Object.entries(state.custom).forEach(([id,h])=>{c[id]={...h,builtin:0};});return c;}
@@ -298,25 +293,6 @@ function catList(){return Object.keys(allCats()).filter(c=>c!=="goals");}
 function avg(a){const f=a.filter(v=>v>0);return f.length?f.reduce((x,y)=>x+y,0)/f.length:0;}
 function sum(a){return a.reduce((x,y)=>x+y,0);}
 function scoreLabel(s){return s>=4.5?"Great":s>=3.5?"Good":s>=2.5?"Okay":s>=1.5?"Low":"—";}
-
-// ─── Confetti ───
-function spawnConfetti(){
-  const box=document.getElementById("confetti-box");if(!box)return;
-  const colors=[getTheme().accent,"#FFD93D","#66D9A0","#F472B6","#C084FC","#FB923C"];
-  for(let i=0;i<18;i++){
-    const dot=document.createElement("div");
-    dot.className="confetti-dot";
-    dot.style.left=Math.random()*100+"%";
-    dot.style.top=(Math.random()*30+10)+"%";
-    dot.style.background=colors[Math.floor(Math.random()*colors.length)];
-    dot.style.width=(4+Math.random()*5)+"px";
-    dot.style.height=dot.style.width;
-    dot.style.animationDuration=(0.8+Math.random()*0.8)+"s";
-    dot.style.animationDelay=(Math.random()*0.3)+"s";
-    box.appendChild(dot);
-    setTimeout(()=>dot.remove(),2000);
-  }
-}
 
 // ─── Streaks ───
 const NO_STREAK = new Set(["medical","goals","feelings"]);
@@ -581,7 +557,7 @@ function render(){
       const isOpen=openCat===cat;const isCustom=!info.builtin;const streak=getStreak(cat);
       const borderColor=isOpen?info.color+"40":"var(--card-border)";
       const bg=isOpen?`linear-gradient(135deg,${info.color}08,${info.color}04)`:"var(--card)";
-      html+=`<div class="habit-card ${isOpen?"open":""} fade-in" style="border-color:${borderColor};background:${bg};animation-delay:${ci*30}ms">
+      html+=`<div class="habit-card ${isOpen?"open":""}" style="border-color:${borderColor};background:${bg}">
         <button class="habit-header" onclick="openCat=openCat==='${cat}'?null:'${cat}';render()">
           <span style="font-size:22px">${info.icon}</span>
           <div style="flex:1">
@@ -710,7 +686,20 @@ function render(){
     </div></div>`;
   }
 
+  // Preserve scroll and focus across re-render
+  const scrollY=window.scrollY;
+  const activeEl=document.activeElement;
+  const activeId=activeEl?.id||"";
+  const activeSel=activeEl?.selectionStart;
+  const activeVal=activeEl?.value;
+
   document.getElementById("app").innerHTML=html;
+
+  window.scrollTo(0,scrollY);
+  if(activeId){
+    const el=document.getElementById(activeId);
+    if(el){el.focus();if(typeof activeSel==="number"&&el.setSelectionRange){el.value=activeVal;el.setSelectionRange(activeSel,activeSel);}}
+  }
 }
 
 // ─── Event handlers ───
