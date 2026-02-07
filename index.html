@@ -9,8 +9,9 @@
 <meta name="theme-color" content="#0B1120">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Habits — Track · Reflect · Grow</title>
-<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiSGFiaXRzIiwic2hvcnRfbmFtZSI6IkhhYml0cyIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMEIxMTIwIiwidGhlbWVfY29sb3IiOiIjMEIxMTIwIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbCw8c3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDEwMCAxMDAnPjx0ZXh0IHk9Jy45ZW0nIGZvbnQtc2l6ZT0nOTAnPuKchTwvdGV4dD48L3N2Zz4iLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCIsInNpemVzIjoiYW55In1dfQ==">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✅</text></svg>">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -773,7 +774,7 @@ function navDate(dir){const d=new Date(selDate);d.setDate(d.getDate()+(view==="d
 load();render();
 // Try loading from Google Sheet in background on startup
 if(getSheetUrl()){loadFromSheet();}
-if('serviceWorker' in navigator){navigator.serviceWorker.register('data:text/javascript,self.addEventListener("fetch",e=>e.respondWith(fetch(e.request).catch(()=>new Response("Offline"))))').catch(()=>{});}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').then(r=>console.log('SW registered')).catch(e=>console.log('SW failed:',e));}
 </script>
 </body>
 </html>
